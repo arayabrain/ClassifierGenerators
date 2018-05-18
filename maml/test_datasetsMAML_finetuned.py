@@ -36,9 +36,6 @@ with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     fxn()
 
-mamlnet = MAMLNet(128, 16, 128).cuda()
-mamlnet.load_state_dict(torch.load("maml-128-16.pth"))
-
 dataset_descriptions = {
 	"data/immunotherapy.npz": "Immunotherapy\\cite{khozeimeh2017expert, khozeimeh2017intralesional}",
 	"data/foresttype.npz": "Forest type\\cite{johnson2012using}",
@@ -60,25 +57,27 @@ dataset_descriptions = {
         "data/dermatology.npz" : "Dermatology"
 	}
 	
-f = open("results/auctable_maml.tex","w")
-f.write("Dataset & N & $\sigma$ & MAML \\\\ \n")
+f = open("results/auctable_maml_ft.tex","w")
+f.write("Dataset & N & $\sigma$ & FTMAML \\\\ \n")
 f.write("\\midrule\n")
 f.close()
-
-methods = [ lambda: MAMLSKL(mamlnet) ]
 
 avg10 = []
 avg20 = []
 avg50 = []
 
 for file in glob.glob("data/*.npz"):
+	mamlnet = MAMLNet(128,16,128).cuda()
+	mamlnet.load_state_dict(torch.load("maml-%s.pth" % file[5:-4]))
+	
+	methods = [ lambda: MAMLSKL(mamlnet) ]
 	data = np.load(file)
 	print(file)
 	data_x = data['x'].astype(np.float32)
 	data_y = data['y'].astype(np.int32)
 	
 	if np.unique(data_y).shape[0]<=16:
-		f = open("results/auctable_maml.tex","a")
+		f = open("results/auctable_maml_ft.tex","a")
 		f.write("\\multirow{3}{*}{%s} " % (dataset_descriptions[file]))
 				
 		if data_x.shape[0]>=20:
@@ -117,7 +116,7 @@ for file in glob.glob("data/*.npz"):
 avg10 = np.array(avg10).mean(axis=0)
 avg50 = np.array(avg50).mean(axis=0)
 
-f = open("results/auctable_maml.tex","a")
+f = open("results/auctable_maml_ft.tex","a")
 f.write("\\midrule \n")
 f.write("\multirow{3}{*}{Average} & 10 & %.3g " % (avg10[i,3]/sqrt(18)))
 for i in range(len(results10)):
